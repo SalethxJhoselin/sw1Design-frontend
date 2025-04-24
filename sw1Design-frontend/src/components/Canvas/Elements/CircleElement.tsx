@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 import { Circle, Transformer } from 'react-konva';
 import { ElementProps } from '../types';
 
-export const CircleElement = ({ 
-  element, 
-  isSelected, 
-  onClick, 
+export const CircleElement = ({
+  element,
+  isSelected,
+  onClick,
   onDragEnd,
   onTransformEnd,
-  draggable 
+  draggable
 }: ElementProps) => {
   const shapeRef = useRef<any>();
   const trRef = useRef<any>();
@@ -26,38 +26,53 @@ export const CircleElement = ({
         ref={shapeRef}
         x={element.x}
         y={element.y}
-        radius={element.radius}
+        radius={element.radius || 50}
         fill={element.fill}
+        stroke={element.stroke}
+        strokeWidth={element.strokeWidth || 1}
+        dash={element.dash}
+        opacity={element.opacity ?? 1}
         draggable={draggable}
-        onDragEnd={(e) => onDragEnd(e, element.id)}
         onClick={(e) => onClick(e, element.id)}
+        onDragStart={(e) => {
+          e.cancelBubble = true;
+        }}
+        onDragEnd={(e) => {
+          onDragEnd(e, element.id);
+          e.cancelBubble = true;
+        }}
         onTransformEnd={() => {
           const node = shapeRef.current;
+          if (!node) return;
           const scaleX = node.scaleX();
-          
-          onTransformEnd(element.id, {
+
+          onTransformEnd({
+            id: element.id,
             x: node.x(),
             y: node.y(),
-            radius: Math.max(5, element.radius * scaleX),
+            radius: Math.max(5, (element.radius || 50) * scaleX),
           });
-          
+
           node.scaleX(1);
           node.scaleY(1);
         }}
-        stroke={isSelected ? "#10b981" : undefined}
-        strokeWidth={isSelected ? 2 : undefined}
       />
       {isSelected && (
         <Transformer
           ref={trRef}
-          resizeEnabled={true}
-          rotateEnabled={false}
           boundBoxFunc={(oldBox, newBox) => {
             if (newBox.width < 10 || newBox.height < 10) {
               return oldBox;
             }
             return newBox;
           }}
+          keepRatio={true} // Mantener relación de aspecto para círculos
+          enabledAnchors={[
+            'top-left',
+            'top-right',
+            'bottom-left',
+            'bottom-right'
+          ]}
         />
       )}
     </>

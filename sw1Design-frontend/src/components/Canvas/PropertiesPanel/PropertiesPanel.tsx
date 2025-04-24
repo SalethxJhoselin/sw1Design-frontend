@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Element } from '../types';
-import { CircleProperties } from './CircleProperties';
 import { CommonProperties } from './CommonProperties';
 import { RectProperties } from './RectProperties';
 import { TextProperties } from './TextProperties';
@@ -50,32 +49,31 @@ export const PropertiesPanel = ({ selectedElement, onPropertyChange }: Propertie
   return (
     <div
       ref={panelRef}
-      onMouseDown={handleMouseDown}
-      className="p-4 bg-white shadow-lg border rounded-xl z-50 cursor-move select-none overflow-y-auto"
+      className="p-4 bg-white shadow-xl border rounded-2xl z-50 select-none overflow-y-auto space-y-6"
       style={{
         position: 'absolute',
         top: position.y,
         left: position.x,
-        width: '300px',
-        maxHeight: '80vh'
+        width: '250px',
+        maxHeight: '90vh'
       }}
     >
-      <h3 className="font-semibold text-lg border-b pb-2 text-center">Propiedades</h3>
-
+      {/* 🟦 Barra de título draggable */}
+      <div
+        onMouseDown={handleMouseDown}
+        className="cursor-move pb-2 border-b font-semibold text-lg text-center"
+      >
+        Propiedades
+      </div>
+      {/* Contenido libre de arrastre */}
       {selectedElement ? (
         <div className="space-y-4 mt-2">
           <CommonProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />
-
           {selectedElement.type === "text" && (
             <TextProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />
           )}
-
           {selectedElement.type === "rect" && (
             <RectProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />
-          )}
-
-          {selectedElement.type === "circle" && (
-            <CircleProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />
           )}
         </div>
       ) : (
@@ -85,4 +83,4 @@ export const PropertiesPanel = ({ selectedElement, onPropertyChange }: Propertie
       )}
     </div>
   );
-};
+}

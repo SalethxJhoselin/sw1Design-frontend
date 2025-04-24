@@ -14,32 +14,6 @@ export const RectProperties = ({ selectedElement, onPropertyChange }) => {
             className="w-full"
           />
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Ancho: {selectedElement.width}px
-          </label>
-          <input
-            type="range"
-            min="20"
-            max="300"
-            value={selectedElement.width || 120}
-            onChange={(e) => onPropertyChange("width", parseInt(e.target.value))}
-            className="w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Alto: {selectedElement.height}px
-          </label>
-          <input
-            type="range"
-            min="20"
-            max="300"
-            value={selectedElement.height || 80}
-            onChange={(e) => onPropertyChange("height", parseInt(e.target.value))}
-            className="w-full"
-          />
-        </div>
       </>
     );
   };

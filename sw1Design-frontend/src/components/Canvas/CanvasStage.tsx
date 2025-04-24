@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useState } from 'react';
-import { Layer, Rect, Stage } from 'react-konva';
+import { Circle, Layer, Line, Rect, Stage, Text } from 'react-konva';
 import { CircleElement } from './Elements/CircleElement';
 import { LineElement } from './Elements/LineElement';
 import { RectElement } from './Elements/RectElement';
@@ -48,7 +48,37 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
         fill: "#1d4ed8"
       });
     }
-    // Aquí puedes agregar lógica similar para circle, line, etc.
+    if (tool === "circle") {
+      setDrawingElement({
+        id: 'temp',
+        type: 'circle',
+        x: pointer.x,
+        y: pointer.y,
+        radius: 1,
+        fill: "#1d4ed8"
+      });
+    }
+    if (tool === "text") {
+      setDrawingElement({
+        id: 'temp',
+        type: 'text',
+        x: pointer.x,
+        y: pointer.y,
+        text: "Nuevo texto",
+        fontSize: 24,
+        fontFamily: "Arial",
+        fill: "#000000"
+      });
+    }
+    if (tool === "line") {
+      setDrawingElement({
+        id: 'temp',
+        type: 'line',
+        points: [pointer.x, pointer.y, pointer.x, pointer.y],  // empieza con un punto doble
+        fill: "#1d4ed8",
+        strokeWidth: 2
+      });
+    }
   };
 
   const handleMouseUp = () => {
@@ -80,14 +110,39 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
       const stage = e.target.getStage();
       const pointer = stage.getPointerPosition();
 
-      const newWidth = pointer.x - drawingElement.x;
-      const newHeight = pointer.y - drawingElement.y;
+      if (drawingElement.type === "rect") {
+        const newWidth = pointer.x - drawingElement.x;
+        const newHeight = pointer.y - drawingElement.y;
 
-      setDrawingElement({
-        ...drawingElement,
-        width: Math.max(5, newWidth),
-        height: Math.max(5, newHeight)
-      });
+        setDrawingElement({
+          ...drawingElement,
+          width: Math.max(5, newWidth),
+          height: Math.max(5, newHeight)
+        });
+      }
+      if (drawingElement.type === "circle") {
+        const dx = pointer.x - drawingElement.x;
+        const dy = pointer.y - drawingElement.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        setDrawingElement({
+          ...drawingElement,
+          radius: Math.max(5, distance)
+        });
+      }
+      if (drawingElement?.type === "line") {
+        const newPoints = [
+          drawingElement.points[0],
+          drawingElement.points[1],
+          pointer.x,
+          pointer.y
+        ];
+
+        setDrawingElement({
+          ...drawingElement,
+          points: newPoints
+        });
+      }
     }
   };
 
@@ -105,7 +160,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
     return () => window.removeEventListener('resize', handleResize);
   }, [hasSidebar]);
 
-  const handleTransformEndWithBounds = ( attrs: any) => {
+  const handleTransformEndWithBounds = (attrs: any) => {
     console.log('Transform end 3:', attrs.id, attrs);
     onTransformEnd(attrs.id, attrs);
   };
@@ -139,6 +194,36 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
               opacity={0.3}
             />
           )}
+          {drawingElement && drawingElement.type === "circle" && (
+            <Circle
+              x={drawingElement.x}
+              y={drawingElement.y}
+              radius={drawingElement.radius}
+              fill={drawingElement.fill}
+              opacity={0.3}
+            />
+          )}
+          {drawingElement && drawingElement.type === "text" && (
+            <Text
+              x={drawingElement.x}
+              y={drawingElement.y}
+              text={drawingElement.text}
+              fontSize={drawingElement.fontSize}
+              fontFamily={drawingElement.fontFamily}
+              fill={drawingElement.fill}
+              opacity={0.3}
+            />
+          )}
+          {drawingElement && drawingElement.type === "line" && (
+            <Line
+              points={drawingElement.points}
+              stroke={drawingElement.fill}
+              strokeWidth={drawingElement.strokeWidth || 2}
+              opacity={0.3}
+              lineCap="round"
+              lineJoin="round"
+            />
+          )}
           {elements.map((element) => {
             const isSelected = element.id === selectedId;
             const commonProps = {
@@ -160,13 +245,24 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
             };
 
             switch (element.type) {
-              case "rect": return <RectElement 
+              case "rect": return <RectElement
                 {...commonProps}
                 onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
               />;
-              case "circle": return <CircleElement {...commonProps} />;
-              case "text": return <TextElement {...commonProps} />;
-              case "line": return <LineElement {...commonProps} />;
+              case "circle": return <CircleElement
+                {...commonProps}
+                onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
+              />;
+              case "text":
+                return <TextElement
+                  {...commonProps}
+                  onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
+                />;
+              case "line":
+                return <LineElement
+                  {...commonProps}
+                  onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
+                />;
               default: return null;
             }
           })}

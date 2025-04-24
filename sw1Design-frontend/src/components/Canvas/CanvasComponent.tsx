@@ -31,9 +31,36 @@ export const CanvasComponent = () => {
     };
 
     const updateProperty = (prop: string, value: any) => {
-        setElements(prev =>
-            prev.map(el => (el.id === selectedId ? { ...el, [prop]: value } : el))
-        );
+        if (prop === "layer") {
+            setElements(prev => {
+                const currentIndex = prev.findIndex(el => el.id === selectedId);
+                if (currentIndex === -1) return prev;
+
+                const newElements = [...prev];
+                const [movedElement] = newElements.splice(currentIndex, 1);
+
+                switch (value) {
+                    case "front":
+                        newElements.push(movedElement);
+                        break;
+                    case "back":
+                        newElements.unshift(movedElement);
+                        break;
+                    case "up":
+                        newElements.splice(Math.min(currentIndex + 1, newElements.length), 0, movedElement);
+                        break;
+                    case "down":
+                        newElements.splice(Math.max(currentIndex - 1, 0), 0, movedElement);
+                        break;
+                }
+
+                return newElements;
+            });
+        } else {
+            setElements(prev =>
+                prev.map(el => (el.id === selectedId ? { ...el, [prop]: value } : el))
+            );
+        }
     };
 
     const exportToPNG = () => {
@@ -47,17 +74,47 @@ export const CanvasComponent = () => {
     const handleTransformEnd = (id: string, attrs: any) => {
         console.log("Transform end de konva 1", id, attrs);
         setElements(prev =>
-            prev.map(el =>
-                el.id === id ? {
-                    ...el,
-                    x: attrs.x,
-                    y: attrs.y,
-                    width: attrs.width,
-                    height: attrs.height,
-                    rotation: attrs.rotation || 0
-                    // Asegúrate de incluir todas las propiedades necesarias
-                } : el
-            )
+            prev.map(el => {
+                if (el.id !== id) return el;
+
+                if (el.type === "rect") {
+                    return {
+                        ...el,
+                        x: attrs.x,
+                        y: attrs.y,
+                        width: attrs.width,
+                        height: attrs.height,
+                        rotation: attrs.rotation || 0
+                    };
+                }
+
+                if (el.type === "circle") {
+                    return {
+                        ...el,
+                        x: attrs.x,
+                        y: attrs.y,
+                        radius: attrs.radius
+                    };
+                }
+
+                if (el.type === "text") {
+                    return {
+                        ...el,
+                        x: attrs.x,
+                        y: attrs.y,
+                        width: attrs.width,
+                        height: attrs.height,
+                        fontSize: attrs.fontSize
+                    };
+                }
+                if (el.type === "line") {
+                    return {
+                        ...el,
+                        points: attrs.points || el.points
+                    };
+                }
+                return el;  // Para otros tipos que aún no manejamos
+            })
         );
     };
 

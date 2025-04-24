@@ -32,9 +32,18 @@ export const RectElement = ({
         draggable={draggable}
         scaleX={1}  // Aseguramos que siempre esté limpio
         scaleY={1}
+        // Propiedades de borde/trazo
+        stroke={element.stroke}
+        strokeWidth={element.strokeWidth || 1}
+        dash={element.dash}
+        // Propiedades de esquinas
+        cornerRadius={element.cornerRadius || 0}
+        // Propiedades de opacidad
+        opacity={element.opacity ?? 1}
+        // Eventos
         onClick={(e) => onClick(e, element.id)}
         onDragStart={(e) => {
-          e.cancelBubble = true; // Esto evita que el evento se propague al stage
+          e.cancelBubble = true;
         }}
         onDragEnd={(e) => {
           onDragEnd(e, element.id);
@@ -61,10 +70,9 @@ export const RectElement = ({
           console.log(Math.max(5, node.height() * scaleY))
           node.scaleX(1);
           node.scaleY(1);
+          {/*stroke={isSelected ? "#10b981" : undefined}
+        strokeWidth={isSelected ? 2 : undefined}va abajo*/}
         }}
-
-        stroke={isSelected ? "#10b981" : undefined}
-        strokeWidth={isSelected ? 2 : undefined}
       />
       {isSelected && (
         <Transformer

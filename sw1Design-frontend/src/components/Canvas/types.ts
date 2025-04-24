@@ -8,8 +8,6 @@ export interface Element {
     width?: number;
     height?: number;
     radius?: number;
-    text?: string;
-    fontSize?: number;
     fill: string;
     points?: number[];
     stroke?: string; //usa valor predefinido
@@ -17,15 +15,40 @@ export interface Element {
     dash?: number[]; //permite aplicar estilos piunteados o guiones
     opacity?: number; //controla la transparencia
     cornerRadius?: number; //aplica bordes redondeados
-  }
-  
+    rotation?: number;
+    innerRadius?: number; // star, arc
+    outerRadius?: number; // star, arc
+    angle?: number; // arc
+    sides?: number; // polygon
+    
+    // Propiedades específicas de texto
+    text?: string;
+    fontSize?: number;
+    fontFamily?: string;
+    fontStyle?: string; // 'normal', 'bold', 'italic', 'underline' o combinaciones
+    align?: 'left' | 'center' | 'right' | 'justify';
+    verticalAlign?: 'top' | 'middle' | 'bottom';
+    lineHeight?: number;
+    letterSpacing?: number;
+    padding?: number;
+
+    // Propiedades de sombra
+    shadowEnabled?: boolean;
+    shadowColor?: string;
+    shadowOffset?: number; // Para compatibilidad hacia atrás
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    shadowBlur?: number;
+    shadowOpacity?: number;
+    shadowForStrokeEnabled?: boolean;
+}
 
 export interface CanvasProps {
     elements: Element[];
     selectedId: string | null;
     onElementClick: (e: any, id: string) => void;
     onDragEnd: (e: any, id: string) => void;
-    onTransformEnd: (id: string, attrs: any) => void; 
+    onTransformEnd: (id: string, attrs: any) => void;
     tool: ToolType;
 }
 
@@ -49,6 +72,6 @@ export interface ElementProps {
     isSelected: boolean;
     onClick: (e: any, id: string) => void;
     onDragEnd: (e: any, id: string) => void;
-    onTransformEnd: (id: string, attrs: any) => void; 
+    onTransformEnd: (id: string, attrs: any) => void;
     draggable: boolean;
-  }
+}
