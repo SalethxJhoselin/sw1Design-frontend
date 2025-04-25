@@ -1,6 +1,5 @@
 import { forwardRef, useEffect, useState } from 'react';
 import { Circle, Layer, Line, Rect, Stage, Text } from 'react-konva';
-import socket from '../../services/socketServices';
 import { CircleElement } from './Elements/CircleElement';
 import { LineElement } from './Elements/LineElement';
 import { RectElement } from './Elements/RectElement';
@@ -109,47 +108,30 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
     if (drawingElement) {
       const stage = e.target.getStage();
       const pointer = stage.getPointerPosition();
-      let updatedElement = { ...drawingElement };
+      const updatedElement = { ...drawingElement };
 
       if (drawingElement.type === "rect") {
-        const newWidth = pointer.x - drawingElement.x;
-        const newHeight = pointer.y - drawingElement.y;
-
-        setDrawingElement({
-          ...drawingElement,
-          width: Math.max(5, newWidth),
-          height: Math.max(5, newHeight)
-        });
+        updatedElement.width = Math.max(5, pointer.x - drawingElement.x);
+        updatedElement.height = Math.max(5, pointer.y - drawingElement.y);
       }
+
       if (drawingElement.type === "circle") {
         const dx = pointer.x - drawingElement.x;
         const dy = pointer.y - drawingElement.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        updatedElement.radius = Math.max(5, Math.sqrt(dx * dx + dy * dy))
 
-        setDrawingElement({
-          ...drawingElement,
-          radius: Math.max(5, distance)
-        });
       }
       if (drawingElement?.type === "line") {
-        const newPoints = [
+        updatedElement.points = [
           drawingElement.points[0],
           drawingElement.points[1],
           pointer.x,
           pointer.y
         ];
-
-        setDrawingElement({
-          ...drawingElement,
-          points: newPoints
-        });
       }
-      
-    // Emitimos el progreso del dibujo
-    socket.emit('drawing-progress', updatedElement);
+      setDrawingElement(updatedElement);
     }
   };
-
 
   // Actualizar dimensiones cuando cambia el sidebar o el tamaño de la ventana
   useEffect(() => {

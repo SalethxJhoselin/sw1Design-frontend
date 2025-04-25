@@ -7,7 +7,6 @@ import { Element, ToolType } from './types';
 
 export const CanvasComponent = () => {
     const [elements, setElements] = useState<Element[]>([]);
-    const [drawingInProgress, setDrawingInProgress] = useState<Element | null>(null);
     const [tool, setTool] = useState<ToolType>("select");
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const stageRef = useRef<any>(null);
@@ -16,7 +15,6 @@ export const CanvasComponent = () => {
 
     useEffect(() => {
         socket.on('receive-element', (data: Element) => {
-            console.log('📥 Elemento recibido:', data);
             setElements(prev => [...prev, data]);
         });
 
@@ -24,14 +22,18 @@ export const CanvasComponent = () => {
             setElements(prev => prev.map(el => el.id === id ? { ...el, x, y } : el));
         });
 
-        socket.on('drawing-progress', (data: Element) => {
-            setDrawingInProgress(data);   // 🔹 Actualiza el progreso de otro usuario
+        socket.on('update-element', ({ id, prop, value }) => {
+            if (prop === 'bulk-update') {
+                setElements(prev => prev.map(el => el.id === id ? { ...el, ...value } : el));
+            } else {
+                setElements(prev => prev.map(el => el.id === id ? { ...el, [prop]: value } : el));
+            }
         });
 
         return () => {
             socket.off('receive-element');  // Limpiar al desmontar
             socket.off('move-element');
-            socket.off('drawing-progress');
+            socket.off('update-element');
         };
     }, []);
 
@@ -86,7 +88,6 @@ export const CanvasComponent = () => {
             setElements(prev =>
                 prev.map(el => (el.id === selectedId ? { ...el, [prop]: value } : el))
             );
-            // Emitir solo cuando es cambio de propiedad real
             socket.emit('update-element', { id: selectedId, prop, value });
         }
     };
@@ -144,6 +145,7 @@ export const CanvasComponent = () => {
                 return el;  // Para otros tipos que aún no manejamos
             })
         );
+        socket.emit('update-element', { id, prop: 'bulk-update', value: attrs });
     };
 
     // Cuando se dibuja un nuevo elemento
@@ -158,7 +160,6 @@ export const CanvasComponent = () => {
                 <CanvasStage
                     ref={stageRef}
                     elements={elements}
-                    drawingInProgress={drawingInProgress}
                     selectedId={selectedId}
                     onElementClick={handleElementClick}
                     onDragEnd={handleDragEnd}
