@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Rect, Transformer } from 'react-konva';
-import socket from '../../../services/socketServices';
 import { ElementProps } from '../types';
 
 export const RectElement = ({
@@ -43,6 +42,7 @@ export const RectElement = ({
         opacity={element.opacity ?? 1}
         // Eventos
         onClick={(e) => onClick(e, element.id)}
+        rotation={element.rotation || 0}
         onDragStart={(e) => {
           e.cancelBubble = true;
         }}
@@ -51,27 +51,12 @@ export const RectElement = ({
           e.cancelBubble = true;
         }}
 
-        onDragMove={(e) => {
-          const newX = e.target.x();
-          const newY = e.target.y();
-          socket.emit('move-element', { id: element.id, x: newX, y: newY });
-        }}
-
         onTransformEnd={() => {
           const node = shapeRef.current;
           if (!node) return;
 
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
-
-          const attrs = {
-            x: node.x(),
-            y: node.y(),
-            width: Math.max(5, node.width() * node.scaleX()),
-            height: Math.max(5, node.height() * node.scaleY()),
-            rotation: node.rotation()
-          };
-          socket.emit('update-element', { id: element.id, prop: 'bulk-update', value: attrs });
 
           onTransformEnd({
             id: element.id,

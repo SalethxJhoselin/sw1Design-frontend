@@ -44,7 +44,8 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
         y: pointer.y,
         width: 1,
         height: 1,
-        fill: "#1d4ed8"
+        fill: "#1d4ed8",
+        rotation: 0
       });
     }
     if (tool === "circle") {
@@ -66,16 +67,20 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
         text: "Nuevo texto",
         fontSize: 24,
         fontFamily: "Arial",
-        fill: "#000000"
+        fill: "#000000",
+        rotation: 0
       });
     }
     if (tool === "line") {
       setDrawingElement({
         id: 'temp',
         type: 'line',
-        points: [pointer.x, pointer.y, pointer.x, pointer.y],  // empieza con un punto doble
+        x: pointer.x,     // 🟢 Punto inicial
+        y: pointer.y,
+        points: [0, 0, 1, 1],  // empieza con un punto doble
         fill: "#1d4ed8",
-        strokeWidth: 2
+        strokeWidth: 2,
+        rotation: 0
       });
     }
   };
@@ -121,13 +126,13 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
         updatedElement.radius = Math.max(5, Math.sqrt(dx * dx + dy * dy))
 
       }
-      if (drawingElement?.type === "line") {
-        updatedElement.points = [
-          drawingElement.points[0],
-          drawingElement.points[1],
-          pointer.x,
-          pointer.y
-        ];
+      if (drawingElement.type === "line") {
+        const startX = 0;
+        const startY = 0;
+        const endX = pointer.x - drawingElement.x;
+        const endY = pointer.y - drawingElement.y;
+
+        updatedElement.points = [startX, startY, endX, endY];
       }
       setDrawingElement(updatedElement);
     }
@@ -178,6 +183,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
               height={drawingElement.height}
               fill={drawingElement.fill}
               opacity={0.3}
+              rotation={drawingElement.rotation || 0}
             />
           )}
           {drawingElement && drawingElement.type === "circle" && (
@@ -198,16 +204,20 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
               fontFamily={drawingElement.fontFamily}
               fill={drawingElement.fill}
               opacity={0.3}
+              rotation={drawingElement.rotation || 0}
             />
           )}
           {drawingElement && drawingElement.type === "line" && (
             <Line
+              x={drawingElement.x}
+              y={drawingElement.y}
               points={drawingElement.points}
               stroke={drawingElement.fill}
               strokeWidth={drawingElement.strokeWidth || 2}
               opacity={0.3}
               lineCap="round"
               lineJoin="round"
+              rotation={drawingElement.rotation || 0}
             />
           )}
           {elements.map((element) => {

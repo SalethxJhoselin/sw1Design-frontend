@@ -57,6 +57,7 @@ export const TextElement = ({
         letterSpacing={element.letterSpacing || 0}
         draggable={draggable}
         onClick={(e) => onClick(e, element.id)}
+        rotation={element.rotation || 0}
         onDragStart={(e) => e.cancelBubble = true}
         onDragEnd={(e) => {
           onDragEnd(e, element.id);
@@ -75,7 +76,8 @@ export const TextElement = ({
             y: node.y(),
             width: element.width ? element.width * scaleX : undefined,
             height: element.height ? element.height * scaleX : undefined,
-            fontSize: newFontSize
+            fontSize: newFontSize,
+            rotation: node.rotation()
           });
 
           node.scaleX(1);

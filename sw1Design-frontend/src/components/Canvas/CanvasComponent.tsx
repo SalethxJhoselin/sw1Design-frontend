@@ -23,6 +23,7 @@ export const CanvasComponent = () => {
         });
 
         socket.on('update-element', ({ id, prop, value }) => {
+            console.log("recibi de update", { id, prop, value });
             if (prop === 'bulk-update') {
                 setElements(prev => prev.map(el => el.id === id ? { ...el, ...value } : el));
             } else {
@@ -133,18 +134,23 @@ export const CanvasComponent = () => {
                         y: attrs.y,
                         width: attrs.width,
                         height: attrs.height,
-                        fontSize: attrs.fontSize
+                        fontSize: attrs.fontSize,
+                        rotation: attrs.rotation || 0
                     };
                 }
                 if (el.type === "line") {
                     return {
                         ...el,
-                        points: attrs.points || el.points
+                        x: attrs.x,
+                        y: attrs.y,
+                        points: attrs.points || el.points,
+                        rotation: attrs.rotation || 0
                     };
                 }
                 return el;  // Para otros tipos que aún no manejamos
             })
         );
+        console.log('update-element', { id, prop: 'bulk-update', value: attrs });
         socket.emit('update-element', { id, prop: 'bulk-update', value: attrs });
     };
 
