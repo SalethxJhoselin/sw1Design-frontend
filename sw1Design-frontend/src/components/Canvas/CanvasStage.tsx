@@ -1,5 +1,6 @@
 import { forwardRef, useEffect, useState } from 'react';
 import { Circle, Layer, Line, Rect, Stage, Text } from 'react-konva';
+import socket from '../../services/socketServices';
 import { CircleElement } from './Elements/CircleElement';
 import { LineElement } from './Elements/LineElement';
 import { RectElement } from './Elements/RectElement';
@@ -32,8 +33,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
       }
       return;
     }
-
-    // Iniciar dibujo dinámico
+    // Iniciar dibujo dinámico, solo se crea un elemento temporal con propedades iniciales
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
 
@@ -109,6 +109,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
     if (drawingElement) {
       const stage = e.target.getStage();
       const pointer = stage.getPointerPosition();
+      let updatedElement = { ...drawingElement };
 
       if (drawingElement.type === "rect") {
         const newWidth = pointer.x - drawingElement.x;
@@ -143,6 +144,9 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
           points: newPoints
         });
       }
+      
+    // Emitimos el progreso del dibujo
+    socket.emit('drawing-progress', updatedElement);
     }
   };
 
