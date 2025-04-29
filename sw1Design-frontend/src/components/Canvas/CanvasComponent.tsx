@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import socket from '../../services/socketServices';
 import { CanvasStage } from './CanvasStage';
 import { PropertiesPanel } from './PropertiesPanel/PropertiesPanel';
@@ -6,35 +7,43 @@ import { Toolbar } from './Toolbar';
 import { Element, ToolType } from './types';
 
 export const CanvasComponent = () => {
-    const [elements, setElements] = useState<Element[]>([]);
+    const location = useLocation();
+    const { elements: initialElements, isEditor: initialIsEditor } = location.state || {};
+
+    const isEditor = initialIsEditor || false;
+    const [elements, setElements] = useState<Element[]>(initialElements || []);
+
     const [tool, setTool] = useState<ToolType>("select");
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const stageRef = useRef<any>(null);
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [secretKey, setSecretKey] = useState<string | null>(null);
 
     const selectedElement = elements.find(el => el.id === selectedId);
 
     useEffect(() => {
-        socket.on('receive-element', (data: Element) => {
-            setElements(prev => [...prev, data]);
-        });
+        const urlParams = new URLSearchParams(window.location.search);
+        const id = urlParams.get('projectId');
+        const key = urlParams.get('key');
+
+        if (id) {
+            setProjectId(id);
+            setSecretKey(key || null);
+        } else {
+            console.error("❌ No se proporcionó un projectId en la URL");
+        }
 
         socket.on('move-element', ({ id, x, y }) => {
             setElements(prev => prev.map(el => el.id === id ? { ...el, x, y } : el));
         });
-
-        socket.on('update-element', ({ id, prop, value }) => {
-            console.log("recibi de update", { id, prop, value });
-            if (prop === 'bulk-update') {
-                setElements(prev => prev.map(el => el.id === id ? { ...el, ...value } : el));
-            } else {
-                setElements(prev => prev.map(el => el.id === id ? { ...el, [prop]: value } : el));
-            }
+        // Escuchar actualizaciones
+        socket.on('elements-updated', (newElements: Element[]) => {
+            setElements(newElements);
         });
 
         return () => {
-            socket.off('receive-element');  // Limpiar al desmontar
             socket.off('move-element');
-            socket.off('update-element');
+            socket.off('elements-updated');
         };
     }, []);
 
@@ -51,15 +60,26 @@ export const CanvasComponent = () => {
     };
 
     const handleDragEnd = (e: any, id: string) => {
+        if (!isEditor) {
+            const element = elements.find(el => el.id === id);
+            if (element) { e.target.x(element.x); e.target.y(element.y); } return;
+        }
         const newX = e.target.x();
         const newY = e.target.y();
-        setElements(prev =>
-            prev.map(el => (el.id === id ? { ...el, x: newX, y: newY } : el))
+        const updatedElements = elements.map(el =>
+            el.id === id ? { ...el, x: newX, y: newY } : el
         );
-        socket.emit('move-element', { id, x: newX, y: newY });
+        setElements(updatedElements);
+        socket.emit('update-elements', {
+            projectId,
+            secretKey,
+            elements: updatedElements,
+            metadata: { updatedAt: new Date().toISOString() }
+        });
     };
 
     const updateProperty = (prop: string, value: any) => {
+        if (!isEditor) return;
         if (prop === "layer") {
             setElements(prev => {
                 const currentIndex = prev.findIndex(el => el.id === selectedId);
@@ -82,14 +102,38 @@ export const CanvasComponent = () => {
                         newElements.splice(Math.max(currentIndex - 1, 0), 0, movedElement);
                         break;
                 }
-
+                // Emitir cambios al backend
+                console.log('update-elements', {
+                    projectId,
+                    secretKey,
+                    elements: newElements,
+                    metadata: { updatedAt: new Date().toISOString() }
+                })
+                socket.emit('update-elements', {
+                    projectId,
+                    secretKey,
+                    elements: newElements,
+                    metadata: { updatedAt: new Date().toISOString() }
+                });
                 return newElements;
             });
         } else {
-            setElements(prev =>
-                prev.map(el => (el.id === selectedId ? { ...el, [prop]: value } : el))
+            const updatedElements = elements.map(el =>
+                el.id === selectedId ? { ...el, [prop]: value } : el
             );
-            socket.emit('update-element', { id: selectedId, prop, value });
+            setElements(updatedElements);
+            console.log('update-elements', {
+                projectId,
+                secretKey,
+                elements: updatedElements,
+                metadata: { updatedAt: new Date().toISOString() }
+            })
+            socket.emit('update-elements', {
+                projectId,
+                secretKey,
+                elements: updatedElements,
+                metadata: { updatedAt: new Date().toISOString() }
+            });
         }
     };
 
@@ -102,62 +146,90 @@ export const CanvasComponent = () => {
     };
 
     const handleTransformEnd = (id: string, attrs: any) => {
-        console.log("Transform end de konva 1", id, attrs);
-        setElements(prev =>
-            prev.map(el => {
-                if (el.id !== id) return el;
+        if (!isEditor) return;
+        const updatedElements = elements.map(el => {
+            if (el.id !== id) return el;
 
-                if (el.type === "rect") {
-                    return {
-                        ...el,
-                        x: attrs.x,
-                        y: attrs.y,
-                        width: attrs.width,
-                        height: attrs.height,
-                        rotation: attrs.rotation || 0
-                    };
-                }
+            if (el.type === "rect") {
+                return {
+                    ...el,
+                    x: attrs.x,
+                    y: attrs.y,
+                    width: attrs.width,
+                    height: attrs.height,
+                    rotation: attrs.rotation || 0
+                };
+            }
 
-                if (el.type === "circle") {
-                    return {
-                        ...el,
-                        x: attrs.x,
-                        y: attrs.y,
-                        radius: attrs.radius
-                    };
-                }
+            if (el.type === "circle") {
+                return {
+                    ...el,
+                    x: attrs.x,
+                    y: attrs.y,
+                    radius: attrs.radius
+                };
+            }
 
-                if (el.type === "text") {
-                    return {
-                        ...el,
-                        x: attrs.x,
-                        y: attrs.y,
-                        width: attrs.width,
-                        height: attrs.height,
-                        fontSize: attrs.fontSize,
-                        rotation: attrs.rotation || 0
-                    };
-                }
-                if (el.type === "line") {
-                    return {
-                        ...el,
-                        x: attrs.x,
-                        y: attrs.y,
-                        points: attrs.points || el.points,
-                        rotation: attrs.rotation || 0
-                    };
-                }
-                return el;  // Para otros tipos que aún no manejamos
-            })
-        );
-        console.log('update-element', { id, prop: 'bulk-update', value: attrs });
-        socket.emit('update-element', { id, prop: 'bulk-update', value: attrs });
+            if (el.type === "text") {
+                return {
+                    ...el,
+                    x: attrs.x,
+                    y: attrs.y,
+                    width: attrs.width,
+                    height: attrs.height,
+                    fontSize: attrs.fontSize,
+                    rotation: attrs.rotation || 0
+                };
+            }
+
+            if (el.type === "line") {
+                return {
+                    ...el,
+                    x: attrs.x,
+                    y: attrs.y,
+                    points: attrs.points || el.points,
+                    rotation: attrs.rotation || 0
+                };
+            }
+
+            return el;
+        });
+
+        setElements(updatedElements);
+
+        console.log('update-elements (transform)', {
+            projectId,
+            secretKey,
+            elements: updatedElements,
+            metadata: { updatedAt: new Date().toISOString() }
+        });
+
+        socket.emit('update-elements', {
+            projectId,
+            secretKey,
+            elements: updatedElements,
+            metadata: { updatedAt: new Date().toISOString() }
+        });
     };
+
 
     // Cuando se dibuja un nuevo elemento
     const handleElementDraw = (el: Element) => {
-        setElements(prev => [...prev, el]);
-        socket.emit('new-element', el);   // 🔴 Emitimos al servidor
+        if (!isEditor) return; // Solo editores pueden modificar
+        const newElements = [...elements, el];
+        setElements(newElements);
+        console.log('update-elements', {
+            projectId,
+            secretKey,
+            elements: newElements,
+            metadata: { updatedAt: new Date().toISOString() }
+        });
+        socket.emit('update-elements', {
+            projectId,
+            secretKey,
+            elements: newElements,
+            metadata: { updatedAt: new Date().toISOString() }
+        });
     };
 
     return (
@@ -172,7 +244,7 @@ export const CanvasComponent = () => {
                     onTransformEnd={handleTransformEnd}
                     onElementDraw={handleElementDraw}
                     tool={tool}
-                    hasSidebar={!!selectedId}
+                    isEditor={isEditor}
                 />
                 <Toolbar
                     tool={tool}

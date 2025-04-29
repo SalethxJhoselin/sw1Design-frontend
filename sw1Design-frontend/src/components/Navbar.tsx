@@ -1,20 +1,21 @@
 import { MenuOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import SaveChangesButton from './SaveChangesButton';
 
-const Navbar = ({ onToggleSidebar }: {
-  onToggleSidebar: () => void;
-}) => {
-
-
+const Navbar = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
+  const location = useLocation();
+  const isCanvasPage = location.pathname.startsWith('/canvas');
   return (
     <header className="fixed top-0 left-0 right-0 w-full py-3 px-6 flex justify-between items-center bg-white border-b border-gray-200 shadow-sm z-50">
+      {onToggleSidebar && (
         <Button
           type="text"
           icon={<MenuOutlined className="text-gray-600" />}
           onClick={onToggleSidebar}
           className="hover:bg-gray-100 rounded-lg p-2"
         />
+      )}
 
       {/* Logo */}
       <div className="flex-1 text-center">
@@ -22,6 +23,9 @@ const Navbar = ({ onToggleSidebar }: {
           design <span className="text-[#005BAA]"> Figm</span>
         </Link>
       </div>
+
+      {/* Botón de guardar solo en /canvas */}
+      {isCanvasPage && <SaveChangesButton />}
     </header>
   );
 };

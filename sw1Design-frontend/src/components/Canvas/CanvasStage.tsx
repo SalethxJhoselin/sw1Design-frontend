@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Circle, Layer, Line, Rect, Stage, Text } from 'react-konva';
 import { CircleElement } from './Elements/CircleElement';
 import { LineElement } from './Elements/LineElement';
@@ -14,93 +14,98 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
   onTransformEnd,
   onElementDraw,
   tool,
-  hasSidebar
 }, ref) => {
-  const cursorClass = tool === "select" ? "cursor-default" : "cursor-crosshair";
-  const [dimensions, setDimensions] = useState({
-    width: window.innerWidth - (hasSidebar ? 256 : 0),
-    height: window.innerHeight - 64
-  });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
+  const [stageScale, setStageScale] = useState(1); // 🆕 Zoom inicial
   const [isPanning, setIsPanning] = useState(false);
   const [drawingElement, setDrawingElement] = useState<any>(null);
 
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        setDimensions({ width, height });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  const handleWheel = (e: any) => {
+    e.evt.preventDefault();
+
+    const scaleBy = 1.05;
+    const stage = e.target.getStage();
+    const oldScale = stageScale;
+
+    const mousePointTo = {
+      x: (stage.getPointerPosition().x - stagePosition.x) / oldScale,
+      y: (stage.getPointerPosition().y - stagePosition.y) / oldScale,
+    };
+
+    const direction = e.evt.deltaY > 0 ? 1 : -1;
+    const newScale = direction > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+
+    setStageScale(newScale);
+
+    setStagePosition({
+      x: stage.getPointerPosition().x - mousePointTo.x * newScale,
+      y: stage.getPointerPosition().y - mousePointTo.y * newScale,
+    });
+  };
+
   const handleMouseDown = (e: any) => {
     if (tool === "select") {
-      if (e.evt.button === 1) {  // Pan con botón del medio
+      if (e.evt.button === 1) { // Botón central = pan
         setIsPanning(true);
       }
       return;
     }
-    // Iniciar dibujo dinámico, solo se crea un elemento temporal con propedades iniciales
+
     const stage = e.target.getStage();
     const pointer = stage.getPointerPosition();
+    if (!pointer) return;
 
-    if (tool === "rect") {
-      setDrawingElement({
-        id: 'temp',
-        type: 'rect',
-        x: pointer.x,
-        y: pointer.y,
-        width: 1,
-        height: 1,
-        fill: "#1d4ed8",
-        rotation: 0
-      });
-    }
-    if (tool === "circle") {
-      setDrawingElement({
-        id: 'temp',
-        type: 'circle',
-        x: pointer.x,
-        y: pointer.y,
-        radius: 1,
-        fill: "#1d4ed8"
-      });
-    }
-    if (tool === "text") {
-      setDrawingElement({
-        id: 'temp',
-        type: 'text',
-        x: pointer.x,
-        y: pointer.y,
-        text: "Nuevo texto",
-        fontSize: 24,
-        fontFamily: "Arial",
-        fill: "#000000",
-        rotation: 0
-      });
-    }
-    if (tool === "line") {
-      setDrawingElement({
-        id: 'temp',
-        type: 'line',
-        x: pointer.x,     // 🟢 Punto inicial
-        y: pointer.y,
-        points: [0, 0, 1, 1],  // empieza con un punto doble
-        fill: "#1d4ed8",
-        strokeWidth: 2,
-        rotation: 0
-      });
+    const commonProps = {
+      id: 'temp',
+      x: (pointer.x - stagePosition.x) / stageScale,
+      y: (pointer.y - stagePosition.y) / stageScale,
+      fill: "#1d4ed8"
+    };
+
+    switch (tool) {
+      case "rect":
+        setDrawingElement({ ...commonProps, type: 'rect', width: 1, height: 1, rotation: 0 });
+        break;
+      case "circle":
+        setDrawingElement({ ...commonProps, type: 'circle', radius: 1 });
+        break;
+      case "text":
+        setDrawingElement({
+          ...commonProps,
+          type: 'text',
+          text: "Nuevo texto",
+          fontSize: 24,
+          fontFamily: "Arial",
+          fill: "#000000",
+          rotation: 0
+        });
+        break;
+      case "line":
+        setDrawingElement({
+          ...commonProps,
+          type: 'line',
+          points: [0, 0, 1, 1],
+          strokeWidth: 2,
+          rotation: 0
+        });
+        break;
     }
   };
-
-  const handleMouseUp = () => {
-    if (isPanning) {
-      setIsPanning(false);
-    }
-
-    if (drawingElement) {
-      // Guardar el elemento dibujado en la lista principal
-      const finalizedElement = {
-        ...drawingElement,
-        id: crypto.randomUUID()
-      };
-      onElementDraw(finalizedElement);   // Debes crear esta función en el padre
-      setDrawingElement(null);
-    }
-  };
-
 
   const handleMouseMove = (e: any) => {
     if (isPanning) {
@@ -108,104 +113,91 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
         x: prev.x + e.evt.movementX,
         y: prev.y + e.evt.movementY
       }));
+      return;
+    }
+
+    if (!drawingElement) return;
+
+    const stage = e.target.getStage();
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    const updated = { ...drawingElement };
+
+    switch (drawingElement.type) {
+      case "rect":
+        updated.width = Math.max(5, (pointer.x - stagePosition.x) / stageScale - drawingElement.x);
+        updated.height = Math.max(5, (pointer.y - stagePosition.y) / stageScale - drawingElement.y);
+        break;
+        case "circle": {
+          const dx = (pointer.x - stagePosition.x) / stageScale - drawingElement.x;
+          const dy = (pointer.y - stagePosition.y) / stageScale - drawingElement.y;
+          updated.radius = Math.max(5, Math.sqrt(dx * dx + dy * dy));
+          break;
+        }
+      case "line":
+        updated.points = [0, 0, (pointer.x - stagePosition.x) / stageScale - drawingElement.x, (pointer.y - stagePosition.y) / stageScale - drawingElement.y];
+        break;
+    }
+
+    setDrawingElement(updated);
+  };
+
+  const handleMouseUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      return;
     }
 
     if (drawingElement) {
-      const stage = e.target.getStage();
-      const pointer = stage.getPointerPosition();
-      const updatedElement = { ...drawingElement };
-
-      if (drawingElement.type === "rect") {
-        updatedElement.width = Math.max(5, pointer.x - drawingElement.x);
-        updatedElement.height = Math.max(5, pointer.y - drawingElement.y);
-      }
-
-      if (drawingElement.type === "circle") {
-        const dx = pointer.x - drawingElement.x;
-        const dy = pointer.y - drawingElement.y;
-        updatedElement.radius = Math.max(5, Math.sqrt(dx * dx + dy * dy))
-
-      }
-      if (drawingElement.type === "line") {
-        const startX = 0;
-        const startY = 0;
-        const endX = pointer.x - drawingElement.x;
-        const endY = pointer.y - drawingElement.y;
-
-        updatedElement.points = [startX, startY, endX, endY];
-      }
-      setDrawingElement(updatedElement);
+      const finalizedElement = {
+        ...drawingElement,
+        id: crypto.randomUUID()
+      };
+      onElementDraw(finalizedElement);
+      setDrawingElement(null);
     }
   };
-
-  // Actualizar dimensiones cuando cambia el sidebar o el tamaño de la ventana
-  useEffect(() => {
-    const handleResize = () => {
-      setDimensions({
-        width: window.innerWidth - (hasSidebar ? 256 : 0),
-        height: window.innerHeight - 64
-      });
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [hasSidebar]);
-
-  const handleTransformEndWithBounds = (attrs: any) => {
-    console.log('Transform end 3:', attrs.id, attrs);
-    onTransformEnd(attrs.id, attrs);
-  };
-
   const handleDragEndWithBounds = (e: any, id: string) => {
-    onDragEnd(e, id);
+    onDragEnd(e, id); // Esta función ya viene como prop desde `CanvasComponent`
+  };
+  const handleTransformEndWithBounds = (attrs: any) => {
+    onTransformEnd(attrs.id, attrs); // 👉 También llamas al prop normal
   };
 
+  const handleDblClick = (e: any) => {
+    if (tool === "select") {
+      setIsPanning(true);
+    }
+  };
   return (
-    <div className="flex-1 overflow-auto flex justify-center items-center bg-gray-100">
+    <div ref={containerRef} className="flex-1 overflow-hidden bg-gray-100">
       <Stage
         ref={ref}
         width={dimensions.width}
         height={dimensions.height}
+        scaleX={stageScale}
+        scaleY={stageScale}
         x={stagePosition.x}
         y={stagePosition.y}
-        draggable={false}
+        draggable={false} // 🛑 Stage no debe ser draggable por Konva, lo manejas manualmente
+        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
         onMouseMove={handleMouseMove}
-        className={`bg-white ${cursorClass}`}
+        onMouseUp={handleMouseUp}
+        onDblClick={handleDblClick}
+        className={`bg-white ${tool === "select" ? "cursor-default" : "cursor-crosshair"}`}
       >
         <Layer>
+          {/* Elemento temporal */}
           {drawingElement && drawingElement.type === "rect" && (
-            <Rect
-              x={drawingElement.x}
-              y={drawingElement.y}
-              width={drawingElement.width}
-              height={drawingElement.height}
-              fill={drawingElement.fill}
-              opacity={0.3}
-              rotation={drawingElement.rotation || 0}
-            />
+            <Rect {...drawingElement} opacity={0.3} />
           )}
           {drawingElement && drawingElement.type === "circle" && (
-            <Circle
-              x={drawingElement.x}
-              y={drawingElement.y}
-              radius={drawingElement.radius}
-              fill={drawingElement.fill}
-              opacity={0.3}
-            />
+            <Circle {...drawingElement} opacity={0.3} />
           )}
           {drawingElement && drawingElement.type === "text" && (
-            <Text
-              x={drawingElement.x}
-              y={drawingElement.y}
-              text={drawingElement.text}
-              fontSize={drawingElement.fontSize}
-              fontFamily={drawingElement.fontFamily}
-              fill={drawingElement.fill}
-              opacity={0.3}
-              rotation={drawingElement.rotation || 0}
-            />
+            <Text {...drawingElement} opacity={0.3} />
           )}
           {drawingElement && drawingElement.type === "line" && (
             <Line
@@ -213,13 +205,15 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
               y={drawingElement.y}
               points={drawingElement.points}
               stroke={drawingElement.fill}
-              strokeWidth={drawingElement.strokeWidth || 2}
+              strokeWidth={drawingElement.strokeWidth}
               opacity={0.3}
               lineCap="round"
               lineJoin="round"
               rotation={drawingElement.rotation || 0}
             />
           )}
+
+          {/* Elementos reales */}
           {elements.map((element) => {
             const isSelected = element.id === selectedId;
             const commonProps = {
@@ -230,9 +224,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
                 e.cancelBubble = true;
                 onElementClick(e, element.id);
               },
-              onDragStart: (e: any) => {
-                e.cancelBubble = true;
-              },
+              onDragStart: (e: any) => e.cancelBubble = true,
               onDragEnd: (e: any) => {
                 e.cancelBubble = true;
                 handleDragEndWithBounds(e, element.id);
@@ -241,24 +233,10 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
             };
 
             switch (element.type) {
-              case "rect": return <RectElement
-                {...commonProps}
-                onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
-              />;
-              case "circle": return <CircleElement
-                {...commonProps}
-                onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
-              />;
-              case "text":
-                return <TextElement
-                  {...commonProps}
-                  onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
-                />;
-              case "line":
-                return <LineElement
-                  {...commonProps}
-                  onTransformEnd={(attrs) => handleTransformEndWithBounds(attrs)}
-                />;
+              case "rect": return <RectElement {...commonProps} onTransformEnd={handleTransformEndWithBounds} />;
+              case "circle": return <CircleElement {...commonProps} onTransformEnd={handleTransformEndWithBounds} />;
+              case "text": return <TextElement {...commonProps} onTransformEnd={handleTransformEndWithBounds} />;
+              case "line": return <LineElement {...commonProps} onTransformEnd={handleTransformEndWithBounds} />;
               default: return null;
             }
           })}
