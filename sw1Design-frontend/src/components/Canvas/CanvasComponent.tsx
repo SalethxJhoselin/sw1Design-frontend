@@ -232,6 +232,35 @@ export const CanvasComponent = () => {
         });
     };
 
+    const handleGenerateCode = async () => {
+        if (!stageRef.current) {
+            console.error("No se pudo acceder al lienzo.");
+            return;
+        }
+    
+        const dataURL = stageRef.current.toDataURL({ pixelRatio: 2 });
+        const base64Image = dataURL.replace(/^data:image\/png;base64,/, "");
+    
+        try {
+            const response = await fetch("http://localhost:3000/generate-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ image: base64Image }),
+            });
+    
+            const result = await response.json();
+            console.log("✅ Código generado:");
+            console.log("HTML:", result.html);
+            console.log("CSS:", result.css);
+            console.log("TS:", result.ts);
+        } catch (error) {
+            console.error("❌ Error al generar código:", error);
+        }
+    };
+
+    
     return (
         <div className="flex h-screen bg-gray-50">
             <div className="relative flex-1">
@@ -256,6 +285,12 @@ export const CanvasComponent = () => {
                     onPropertyChange={updateProperty}
                 />
             </div>
+            <button
+  onClick={handleGenerateCode}
+  className="fixed bottom-4 left-4 z-50 px-4 py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
+>
+  Generar Código
+</button>
         </div>
     );
 };
