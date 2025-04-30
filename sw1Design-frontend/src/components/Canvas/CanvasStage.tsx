@@ -1,3 +1,4 @@
+import Konva from 'konva';
 import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Circle, Layer, Line, Rect, Stage, Text } from 'react-konva';
 import { CircleElement } from './Elements/CircleElement';
@@ -6,7 +7,7 @@ import { RectElement } from './Elements/RectElement';
 import { TextElement } from './Elements/TextElement';
 import { CanvasProps } from './types';
 
-export const CanvasStage = forwardRef<any, CanvasProps>(({
+export const CanvasStage = forwardRef<Konva.Stage, CanvasProps>(({
   elements,
   selectedId,
   onElementClick,
@@ -154,7 +155,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
         ...drawingElement,
         id: crypto.randomUUID()
       };
-      onElementDraw(finalizedElement);
+      onElementDraw?.(finalizedElement); 
       setDrawingElement(null);
     }
   };
@@ -165,7 +166,7 @@ export const CanvasStage = forwardRef<any, CanvasProps>(({
     onTransformEnd(attrs.id, attrs); // 👉 También llamas al prop normal
   };
 
-  const handleDblClick = (e: any) => {
+  const handleDblClick = () => {
     if (tool === "select") {
       setIsPanning(true);
     }

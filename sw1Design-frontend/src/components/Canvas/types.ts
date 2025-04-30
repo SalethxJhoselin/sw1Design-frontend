@@ -1,5 +1,6 @@
 export type ToolType = "select" | "rect" | "circle" | "text" | "line";
 
+export type TextElement = Element & { type: "text" };
 export interface Element {
     id: string;
     type: ToolType;
@@ -49,7 +50,9 @@ export interface CanvasProps {
     onElementClick: (e: any, id: string) => void;
     onDragEnd: (e: any, id: string) => void;
     onTransformEnd: (id: string, attrs: any) => void;
+    onElementDraw?: (el: Element) => void;
     tool: ToolType;
+    isEditor: boolean; 
 }
 
 export interface PropertiesPanelProps {

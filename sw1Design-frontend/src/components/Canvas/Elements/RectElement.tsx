@@ -1,3 +1,5 @@
+import type { Rect as RectType } from 'konva/lib/shapes/Rect';
+import type { Transformer as TransformerType } from 'konva/lib/shapes/Transformer';
 import { useEffect, useRef } from 'react';
 import { Rect, Transformer } from 'react-konva';
 import { ElementProps } from '../types';
@@ -10,13 +12,13 @@ export const RectElement = ({
   onTransformEnd,
   draggable
 }: ElementProps) => {
-  const shapeRef = useRef<any>();
-  const trRef = useRef<any>();
+  const shapeRef = useRef<RectType | null>(null);
+  const trRef = useRef<TransformerType | null>(null);
 
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
       trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer().batchDraw();
+      trRef.current.getLayer()?.batchDraw();
     }
   }, [isSelected]);
 
@@ -58,14 +60,16 @@ export const RectElement = ({
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
 
-          onTransformEnd({
-            id: element.id,
-            x: node.x(),
-            y: node.y(),
-            width: Math.max(5, node.width() * scaleX),
-            height: Math.max(5, node.height() * scaleY),
-            rotation: node.rotation()
-          });
+          onTransformEnd(
+            element.id,
+            {
+              x: node.x(),
+              y: node.y(),
+              width: Math.max(5, node.width() * scaleX),
+              height: Math.max(5, node.height() * scaleY),
+              rotation: node.rotation()
+            }
+          );
           node.scaleX(1);
           node.scaleY(1);
         }}

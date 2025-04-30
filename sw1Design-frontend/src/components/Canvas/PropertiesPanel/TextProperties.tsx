@@ -1,6 +1,14 @@
 import { fontFamilies, textAlignOptions } from "../../constants/text";
+import type { TextElement } from "../types";
 
-export const TextProperties = ({ selectedElement, onPropertyChange }) => {
+export const TextProperties = ({
+  selectedElement,
+  onPropertyChange
+}: {
+  selectedElement: TextElement;
+  onPropertyChange: (prop: string, value: any) => void;
+}) => {
+
   // Manejar el cambio de estilo de fuente (combinable)
   const handleFontStyleChange = (style: string) => {
     const currentStyle = selectedElement.fontStyle || 'normal';

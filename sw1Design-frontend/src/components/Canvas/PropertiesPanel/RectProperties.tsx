@@ -1,5 +1,14 @@
-export const RectProperties = ({ selectedElement, onPropertyChange }) => {
-    return (
+import type { Element } from "../types";
+
+export const RectProperties = ({
+  selectedElement,
+  onPropertyChange
+}: {
+  selectedElement: Element;
+  onPropertyChange: (prop: string, value: any) => void;
+}) => {
+  
+  return (
       <>
         <div>
           <label className="block text-sm font-medium mb-1">

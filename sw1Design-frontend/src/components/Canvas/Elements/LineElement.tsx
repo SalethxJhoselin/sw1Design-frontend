@@ -1,3 +1,5 @@
+import type { Line as LineType } from 'konva/lib/shapes/Line';
+import type { Transformer as TransformerType } from 'konva/lib/shapes/Transformer';
 import { useEffect, useRef } from 'react';
 import { Line, Transformer } from 'react-konva';
 import { ElementProps } from '../types';
@@ -10,13 +12,13 @@ export const LineElement = ({
   onTransformEnd,
   draggable
 }: ElementProps) => {
-  const shapeRef = useRef<any>();
-  const trRef = useRef<any>();
+  const shapeRef = useRef<LineType | null>(null);
+  const trRef = useRef<TransformerType | null>(null);
 
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
       trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer().batchDraw();
+      trRef.current.getLayer()?.batchDraw();
     }
   }, [isSelected]);
   return (
@@ -45,7 +47,7 @@ export const LineElement = ({
         shadowBlur={isSelected ? 10 : 0}
         onTransformEnd={() => {
           const node = shapeRef.current;
-          if (!node) return;
+          if (!node || !element.points) return; 
         
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
@@ -55,13 +57,15 @@ export const LineElement = ({
             index % 2 === 0 ? point * scaleX : point * scaleY
           );
         
-          onTransformEnd({
-            id: element.id,
-            x: node.x(),
-            y: node.y(),
-            points: newPoints,
-            rotation: node.rotation()
-          });
+          onTransformEnd(
+            element.id,
+            {
+              x: node.x(),
+              y: node.y(),
+              points: newPoints,
+              rotation: node.rotation()
+            }
+          );
         
           // Resetear el scale
           node.scaleX(1);

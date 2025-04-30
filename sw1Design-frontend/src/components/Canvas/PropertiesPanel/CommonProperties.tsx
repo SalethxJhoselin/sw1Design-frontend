@@ -1,10 +1,15 @@
+import { PropertiesPanelProps } from "../types";
+
 const dashOptions = {
   solid: [],
   dashed: [10, 5],
   dotted: [2, 4]
 };
-
-export const CommonProperties = ({ selectedElement, onPropertyChange }) => {
+export const CommonProperties = ({
+  selectedElement,
+  onPropertyChange
+}: PropertiesPanelProps) => {
+  if (!selectedElement) return null;
   const currentDash = JSON.stringify(selectedElement.dash || []);
 
   const getDashType = () => {

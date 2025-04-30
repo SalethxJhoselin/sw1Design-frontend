@@ -1,6 +1,9 @@
+import type { Circle as CircleType } from 'konva/lib/shapes/Circle';
+import type { Transformer as TransformerType } from 'konva/lib/shapes/Transformer';
 import { useEffect, useRef } from 'react';
 import { Circle, Transformer } from 'react-konva';
 import { ElementProps } from '../types';
+
 
 export const CircleElement = ({
   element,
@@ -10,13 +13,13 @@ export const CircleElement = ({
   onTransformEnd,
   draggable
 }: ElementProps) => {
-  const shapeRef = useRef<any>();
-  const trRef = useRef<any>();
+  const shapeRef = useRef<CircleType | null>(null);
+  const trRef = useRef<TransformerType | null>(null);
 
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
       trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer().batchDraw();
+      trRef.current.getLayer()?.batchDraw();
     }
   }, [isSelected]);
 
@@ -46,12 +49,14 @@ export const CircleElement = ({
           if (!node) return;
           const scaleX = node.scaleX();
 
-          onTransformEnd({
-            id: element.id,
-            x: node.x(),
-            y: node.y(),
-            radius: Math.max(5, (element.radius || 50) * scaleX),
-          });
+          onTransformEnd(
+            element.id,
+            {
+              x: node.x(),
+              y: node.y(),
+              radius: Math.max(5, (element.radius || 50) * scaleX),
+            }
+          );
 
           node.scaleX(1);
           node.scaleY(1);

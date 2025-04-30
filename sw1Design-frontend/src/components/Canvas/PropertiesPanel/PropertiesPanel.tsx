@@ -70,7 +70,10 @@ export const PropertiesPanel = ({ selectedElement, onPropertyChange }: Propertie
         <div className="space-y-4 mt-2">
           <CommonProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />
           {selectedElement.type === "text" && (
-            <TextProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />
+            <TextProperties
+              selectedElement={selectedElement as Element & { type: "text" }}
+              onPropertyChange={onPropertyChange}
+            />
           )}
           {selectedElement.type === "rect" && (
             <RectProperties selectedElement={selectedElement} onPropertyChange={onPropertyChange} />

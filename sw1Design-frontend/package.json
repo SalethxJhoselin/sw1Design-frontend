@@ -14,6 +14,8 @@
     "ant": "^0.0.0",
     "antd": "^5.24.8",
     "design": "^0.1.0",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "jwt-decode": "^4.0.0",
     "konva": "^9.3.20",
     "react": "^19.0.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.22.0",
+    "@types/file-saver": "^2.0.7",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react-swc": "^3.8.0",

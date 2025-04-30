@@ -1,7 +1,8 @@
+import type { Text as TextType } from 'konva/lib/shapes/Text';
+import type { Transformer as TransformerType } from 'konva/lib/shapes/Transformer';
 import { useEffect, useRef } from 'react';
 import { Text, Transformer } from 'react-konva';
 import { ElementProps } from '../types';
-
 export const TextElement = ({
   element,
   isSelected,
@@ -10,14 +11,14 @@ export const TextElement = ({
   onTransformEnd,
   draggable
 }: ElementProps) => {
-  const shapeRef = useRef<any>();
-  const trRef = useRef<any>();
+  const shapeRef = useRef<TextType | null>(null);
+  const trRef = useRef<TransformerType | null>(null);
 
   // Actualizar el transformer cuando cambian las propiedades del texto
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current) {
       trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer().batchDraw();
+      trRef.current.getLayer()?.batchDraw();
     }
   }, [isSelected, element.text, element.fontSize, element.fontFamily]);
 
@@ -70,8 +71,9 @@ export const TextElement = ({
           const scaleX = node.scaleX();
           const newFontSize = Math.max(8, (element.fontSize || 16) * scaleX);
 
-          onTransformEnd({
-            id: element.id,
+          onTransformEnd(
+            element.id,
+            {
             x: node.x(),
             y: node.y(),
             width: element.width ? element.width * scaleX : undefined,
